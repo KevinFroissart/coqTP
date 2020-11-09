@@ -1,0 +1,114 @@
+Require Import Arith.
+Require Import List.
+Export ListNotations.
+
+(* ON RAPPELLE LES DÉFINITIONS VUES EN LANGAGES FORMELS *)
+
+(* Fonction "lgr" qui calcule la longueur d'une liste de nat (et donc de type list nat) *)
+Fixpoint lgr (l : list nat) := match l with [] => 0 | _::rl => 1 + (lgr rl) end.
+
+Example ex_lgr : (lgr (1::2::3::4::5::[])) = 5.
+Proof. cbv. reflexivity. Qed.
+
+(* Fonction "mir" qui calcule le miroir d'une liste de nat *)
+Fixpoint mir (l : list nat) := match l with [] => [] | e::rl => (mir rl) ++ [e] end.
+(* dans la vraie vie on ne fera jamais de concaténation de ce type mais ce n'est pas le problème ici *)
+
+Example ex_mir : (mir (1::2::3::4::5::[])) = 5::4::3::2::1::[].
+Proof. cbv. reflexivity. Qed.
+
+(* On rappelle le type "ctree" des arbres binaires ou ternaires avec valeurs de type nat stockées dans les feuilles *)
+Inductive ctree : Type :=
+| V : nat -> ctree
+| R : ctree -> ctree -> ctree
+| T : ctree -> ctree -> ctree -> ctree
+.
+
+(* Fonction "csumval" qui calcule la somme des valeurs contenues dans l'arbre *)
+Fixpoint csumval t :=
+  match t with
+  | V e => e
+  | R t1 t2 => (csumval t1) + (csumval t2)
+  | T t1 t2 t3 => (csumval t1) + (csumval t2) + (csumval t3)
+  end.
+
+
+(* Fonction "cajout" qui ajoute un élément dans un arbre *)
+Fixpoint cajout e t : ctree :=
+  match t with
+  | V n => R t (V e)
+  | R t1 t2 => R (cajout e t1) t2
+  | T t1 t2 t3 => T (cajout e t1) t2 t3
+  end.
+
+(* exemples *)
+(* On peut définir "ac1"  : o
+                           / \
+                          o   7
+                         /|\
+                        1 2 o
+                           /|\
+                          o 6 3
+                         / \
+                        4   5
+*)
+Definition ac1 := R (T (V 1) (V 2) (T (R (V 4) (V 5)) (V 6) (V 3))) (V 7).
+
+Example ex_csumval_ab1 : (csumval ac1) = 28.
+Proof. simpl. reflexivity. Qed.
+
+
+
+(*************** LOGIQUE CLASSIQUE ***************)
+
+Context (A B C D : Prop).
+
+(* EXERCICE *)
+(* Prouver les lemmes suivants *)
+Lemma LC1 : ((A \/ B) -> C) -> ((A -> C) /\ (B -> C)).
+Proof.
+Qed.
+
+
+Lemma LC2 : (A \/ B) -> ((A -> B) -> B).
+Proof.
+Qed.
+
+
+(* EXERCICE *)
+(* Exprimer et montrer que la longueur de la concaténation de deux listes de nat (donc de type list nat)  est la somme des longueurs des concaténés*)
+Lemma concat_compat : .
+Proof.
+Qed.
+
+(* EXERCICE *)
+(* Montrer que la longueur d'une liste c'est la longueur de son miroir *)
+(* On pourra avoir besoin de la commutativité de l'addition, donnée par le lemme Nat.add_comm, et dulemme précédent *)
+
+Check Nat.add_comm.
+
+Lemma lgrmireq : .
+Proof.
+Qed.
+
+(* EXERCICE *)
+(* Exprimer et montrer que l'addition est associative, c'est-à-dire qu'on a (x + y) + z = x + (y + z) pour x, y et z de type nat. *)
+(* rappel : ce qui est noté x + y + z (sans parenthèses) est en fait (x + y) + z *)
+Lemma p_assoc : .
+Proof.
+Qed.
+
+
+(* EXERCICE *)
+(* Exprimer et montrer que la somme des valeurs d'un arbre t à laquelle on additionne un nat e est égale à la somme des valeurs de l'arbre t dans lequel on a ajouté un élément de valeur e. *)
+
+(* On pourra avoir besoin de la commutativité de l'addition, donnée par le lemme Nat.add_comm, et de l'associativité démontrée auparavant. *)
+
+Check Nat.add_comm.
+
+
+Lemma csumaj_compat : .
+Proof.
+Qed.
+
+
