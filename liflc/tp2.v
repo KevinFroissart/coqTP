@@ -231,9 +231,16 @@ Qed.
 (* Exercice : montrer que la fonction appliquée à la concaténation de
 deux listes quelconques l1 l2 retourne la somme des applications de
 cette fonction à chacune des deux listes.*)
-Lemma length_of_concat : False. (* remplacer False *)
+Lemma length_of_concat : forall l1 l2 : nlist, length (concat l1 l2) = length l1 + length l2.
 Proof.
-Admitted.
+  intros l1 l2.
+  induction l1.
+  + simpl.
+    reflexivity.
+  + simpl.
+    rewrite <- IHl1.
+    reflexivity.
+Qed.
 
 
 
@@ -242,16 +249,24 @@ concaténation de deux listes l1 et l2 est la même chose que concaténer
 l1 avec x en tête et l2. *)
 (* pas de difficulté, c'est juste un pas de calcul (simpl). *)
 
-Lemma concat_cons : False. (* remplacer False *)
+(*Lemma concat_cons : forall (x : nat) (l l1 l2 : nlist), x::(concat l1 l2) - concat (x::l1) l2.
 Proof.
-Admitted.
+  simpl.
+  reflexivity.
+Qed.*)
   
 (* Montrer maintenant que concaténer à l1 la liste vide renvoie exactement la liste l1. *)
 (* Comme on a défini concat par récursion sur le premier paramètre, il va falloir une induction... *)
-Lemma concat_nil_r : False. (* remplacer False *)
+(*Lemma concat_nil_r : forall l1 : nlist, concat l1 l1 = l1.
 Proof.
-Admitted.
-
+  induction l1.
+  * simpl.
+    reflexivity.
+  * simpl.
+  rewrite <- IHl1.
+  reflexivity.
+Qed.
+*)
 
 (* On reprend la fonction appartient du TP de LIFLF *)
 Fixpoint appartient (x : nat) (l : nlist) : bool :=
@@ -279,11 +294,30 @@ Check beq_nat_true.
 l'hypothèse *)
 (* Rappel : la règle d'introduction de l'existentiel dans le but est : exists objet_specialisé *)
   
-Theorem appartient_seulement : False. (* remplacer False *)
+Theorem appartient_seulement : forall x l, appartient x l = true -> exists l1 l2, l = l1 ++ (x::l2).
 Proof.
-Admitted.
-
-    
+intros x l H.
+induction l.
+- simpl in H.
+  discriminate.
+- simpl in H.
+  apply Bool.orb_prop in H.
+  destruct H.
+  * apply beq_nat_true in H.
+    exists [].
+    exists l.
+    simpl.
+    rewrite <- H.
+    reflexivity.
+  * apply IHl in H.
+    destruct H.
+    destruct H.
+    rewrite H.
+    exists (n::x0).
+    exists x1.
+    simpl.
+    reflexivity.
+Qed.
 
 (**********************************************************************)
 (**********************************************************************)
@@ -312,6 +346,12 @@ Inductive BinTree : Set :=
   | leaf : BinTree 
   | node : BinTree -> nat -> BinTree -> BinTree.
 
+(*
+Est-ce que les entiers sont :
+  - sur les feuilles
+  - sur les noeuds intermédiaires - bonne réponse
+  - sur les feuilles ET noeuds intermédiaires
+*)
 (**********************************************************************)
 (* Montrer (par induction bien sûr) qu'un arbre binaire comportant
    n occurrences de l’arbre vide contient n - 1 éléments              *)
@@ -321,14 +361,29 @@ Check plus_n_Sm.
 
 (* Les deux fonctions qui comptent *)
 Fixpoint count_leaves (t:BinTree) : nat :=
-  0 (* remplacer 0 *).
+match t with
+  | leaf => 1
+  | node l n r => count_leaves l + count_leaves r
+end.
 
 Fixpoint count_nodes (t:BinTree) : nat :=
-  666 (* remplacer 666 *).
+match t with
+  | leaf => 0
+  | node l n r => 1 + count_nodes l + count_nodes r
+end.
 
 (* la propriété *)
-Lemma count_leaves_nodes : forall (t:BinTree), 1 + (count_nodes t) =  (count_leaves  t).
+Lemma count_leaves_nodes : forall (t:BinTree), 1 + (count_nodes t) = (count_leaves t).
 Proof.
-Admitted.
-
+  intros t.
+  induction t.
+  * simpl.
+    reflexivity.
+  * simpl.
+    rewrite <- IHt1.
+    rewrite <- IHt2.
+    simpl.
+    rewrite plus_n_Sm.
+    reflexivity.
+Qed.
 
