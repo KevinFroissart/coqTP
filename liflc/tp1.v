@@ -237,6 +237,27 @@ Proof.
   assumption.
 Qed.
 
+Definition si_cest_vrai_cest_pas_faux := P -> ~~P.
+
+Theorem scvcpf: si_cest_vrai_cest_pas_faux /\ (~~P -> P).
+Proof.
+split.
+- unfold si_cest_vrai_cest_pas_faux.
+  intros H2.
+  intros H3.
+  apply H3.
+  assumption.
+- intros H. 
+  assert (P \/ ~P).
+  exact (Tiers_exclus P).
+  destruct H0.
+  * assumption.
+  * exfalso. apply H. assumption.
+Qed.
+  
+
+
+
 
 
 
