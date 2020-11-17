@@ -30,10 +30,16 @@ Definition comp_alphabet (x y : Alphabet) : bool :=
          end
 end.
 
+Lemma comp_alphabet_correct : forall x y, comp_alphabet x y  = true <-> x = y.
+Proof.
+destruct x; destruct y; split; intros H; simpl in H; auto; try discriminate.
+Qed.
+
 Require Export List.
 Import ListNotations.
 
 (* La fonction "appartient" qui teste si un entier appartient à une liste d'entiers *)
+(* TODO : à trouver dans la bibliothèque standard *)
 Fixpoint appartient (x : nat) (l : list nat) : bool :=
   match l with
   | [] => false
@@ -50,10 +56,28 @@ Fixpoint trouve (assoc : list (Alphabet * nat)) (key : Alphabet) : option nat :=
                    else trouve rassoc key
   end.
 
+Goal trouve [(a,1);(a,2);(b,0)] b = Some 0.
+Proof.
+auto.
+Qed.
+
+Goal trouve [(a,1);(a,2);(b,0)] a = Some 1.
+Proof.
+auto.
+Qed.
+
+Goal trouve [(a,1);(a,2)] b = None.
+Proof.
+auto.
+Qed.
+
 
 (* Le type Automate représentant ce quintuplet. *)
 Inductive Automate : Type :=
-    automate : list nat -> list Alphabet -> (nat -> Alphabet -> option nat) -> nat -> list nat -> Automate.
+    (* automate : list nat -> list Alphabet -> (nat -> Alphabet -> option nat) -> nat -> list nat -> Automate. *)
+automate (ets : list nat) (symb : list Alphabet) (delta : nat -> Alphabet -> option nat) (init : nat) (finaux : list nat) : Automate.
+
+
 
 (* "etats" : prend en paramètre un automate et renvoie la liste des états *)
 Definition etats (M : Automate) :  list nat :=
@@ -102,6 +126,11 @@ Definition reconnait (M : Automate) (w : list Alphabet) : bool :=
   | Some e => acceptant M e
   end.
 
+(*
+    loop a      loop a
+     (0)  --b-- ((1))
+         <--b--
+*)
 
 (* L'automate "M_nb_b_impair" à deux états qui accepte les mots contenant un nombre impair de 'b' *)
 Definition delta_nb_b_impair (q : nat) (c : Alphabet) : option nat :=
@@ -114,6 +143,22 @@ match (q,c) with
 end.
 Definition M_nb_b_impair := automate [1;2] [a;b] (delta_nb_b_impair) 1 [2].
 
+Goal reconnait M_nb_b_impair [a;b] = true.
+Proof.
+auto.
+Qed.
+
+Goal reconnait M_nb_b_impair [a;b;b;a] = false.
+Proof.
+auto.
+Qed.
+
+(*
+
+                 <--a--
+   (1) -a-> ((2)) --b--> (3)
+           loop a      loop b
+*)
 
 (* L'automate "M_commence_et_finit_par_a" à trois états qui accepte les mots commençant et finissant par 'a' *)
 Definition delta_commence_et_finit_par_a (q : nat) (c : Alphabet) : option nat :=
@@ -128,6 +173,15 @@ end.
 Definition M_commence_et_finit_par_a := automate [1;2;3] [a;b] (delta_commence_et_finit_par_a) 1 [2].
 
 
+Goal reconnait M_commence_et_finit_par_a [a;b] = false.
+Proof.
+auto.
+Qed.
+Goal reconnait M_commence_et_finit_par_a [a;b;b;a;b;a] = true.
+Proof.
+auto.
+Qed.
+
 (* ------------------------------------------------------------ *)
 
 
@@ -141,25 +195,38 @@ Definition M_commence_et_finit_par_a := automate [1;2;3] [a;b] (delta_commence_e
    S2 -> epsilon
 *)
 
-(* Expliquer que "G1 m i" c'est le <blink>PRÉDICAT</blink> "mot généré par G1 à partir du non-terminal i" *)
-(* Expliquer en langue naturelle comment construire ce prédicat *)
-(*G1 un inductif qui termine en Prop : ici F1 est une relation entre mots et états 
-Par exemple : G1 [a;b] 1 '=' true
-Si on fixe l'état ex: (G1_n) : mot -> Prop : ensemble de mots
-l'ensemble des mots reconnus à partir de l'état n
 
-Le langage reconnu c'est G1_(etat_initial) = G1_1
+(*
+Definition delta_nb_b_impair (q : nat) (c : Alphabet) : option nat :=
+match (q,c) with
+ | (1,a) => Some 1
+ | (1,b) => Some 2
+ | (2,a) => Some 2
+ | (2,b) => Some 1
+ | (_,_) => None
+end.
 *)
+
+(* Expliquer que "G1 m i" c'est le <blink>PRÉDICAT</blink> "mot généré par G1 à partir du non-terminal i" *)
+(* Expliquer en langue naturelle comment construire ce prédicat : INDICE : le lemme d'Arden*)
+
+(* G1 : un inductif qui 'termine' en Prop : ici G1 c'est UNE RELATION entre mots et etats *)
+(* par exemple : G1 [a;b] 1 '=' True *)
+(* si on fixe l'état, e.g., (G1_n) : Mot -> Prop : ensemble de mots 
+   l'ensemble des mots reconnus à partir de l'état n *)
+(* le langage reconnu c'est G1_(etat initial) = G1_1 *)
+
 Inductive G1 : (list Alphabet) -> nat -> Prop :=
-| G1_0 : G1 [] 2 (*Accepte le mot vide, 2 est final *)
-| G1_1a : forall m, G1 m 1 -> G1 (a::m) 1 (*C'est la transition 1 --a--> 1 *)
-| G1_1b : forall m, G1 m 2 -> G1 (b::m) 1 (*C'est la transition 1 --b--> 2 *)
-| G1_2a : forall m, G1 m 2 -> G1 (a::m) 2 (*C'est la transition 2 --a--> 2 *)
-| G1_2b : forall m, G1 m 1 -> G1 (b::m) 2 (*C'est la transition 2 --b--> 1 *)
+| G1_0 : G1 [] 2
+| G1_1a : forall m, G1 m 1 -> G1 (a::m) 1 (* c'est la transition 1 --a--> 1 *)
+| G1_1b : forall m, G1 m 2 -> G1 (b::m) 1 (* c'est la transition 1 --b--> 2 *)
+| G1_2a : forall m, G1 m 2 -> G1 (a::m) 2 (* c'est la transition 2 --a--> 2 *)
+| G1_2b : forall m, G1 m 1 -> G1 (b::m) 2 (* c'est la transition 2 --b--> 1 *)
 .
 
-(* si on appelle C i le langage reconnu en lisant à partir de l'état i (comme avec Arden)
-  G1 m 2 -> G1 (b::m) 1 <=> à fire X 1 = b.X 2 *)
+(* si on appelle X_i le langage reconnu en lisant à partir de l'état i (comme avec Arden)
+   G1 m 2 -> G1 (b::m) 1  <=>  à dire X_1 = b.X_2 *)
+  
 
 (* G1 génère le mot abaabab à partir du non-terminal S1 *)
 Example ex_G1_1 : G1 [a;b;a;a;b;a;b] 1.
@@ -218,52 +285,28 @@ Qed.
 
 (* EXERCICE *)
 (* Montrer que si G1 génère un mot, alors M_nb_b_impair accepte ce mot. *)
+(* LE SENS 'FACILE' : G1 c'est un inductif, on va faire induction sur un element de G1*)
 Lemma G1_mime_M1 :
   forall m q, G1 m q
   -> exists e, execute M_nb_b_impair q m = Some e /\ acceptant M_nb_b_impair e = true.
 Proof.
-intros.
-exists 2.
-split.
-* induction H.
-  - simpl.
-    reflexivity.
-  - simpl.
-    assumption.
-  - simpl.
-    assumption.
-  - simpl.
-    assumption.
-  - simpl.
-    assumption.
-* simpl.
-  reflexivity.
-Restart.
-intros.
-exists 2.
-split.
-* induction H; trivial.
-* simpl.
-  reflexivity.
+intros m q H; exists 2 ; split; auto; induction H; trivial.
 Qed.
-
 
 (* Tout mot m généré par G à partir de la source est reconnu par M. *)
 (* Si G génère un mot m à partir du non-terminal S1, alors A accepte m *)
 
 (* EXERCICE *)
 (* Montrer que si G1 génère un mot, alors M_nb_b_impair accemte ce mot. *)
-(* HINT. C'est un cas particulier du théorème précédent : on va juste faire des unfolds au début *)
+(* HINT. C'est un cas particulier du théorème précédent : on fa juste faire des unfolds au début *)
 Lemma G1_reco_M1 : forall m, G1 m 1 -> reconnait M_nb_b_impair m = true.
 Proof.
+intros m H.
+apply G1_mime_M1 in H. (* la LIGNE LA PLUS IMPORTANTE *)
+destruct H as [q [H0 H1]].
 unfold reconnait.
-intros.
-apply G1_mime_M1 in H.
-destruct H.
-destruct H.
 simpl.
-rewrite H.
-simpl in H0.
+rewrite H0.
 assumption.
 Qed.
 
@@ -277,42 +320,45 @@ Require Import Arith.
 Check EqNat.beq_nat_true.
 
 
+Check EqNat.beq_nat_true.
+Locate "=?".
+Check Nat.eqb_eq.
+Search (orb _  false).
+
+Lemma acceptant_iff : forall e, acceptant M_nb_b_impair e = true <-> e = 2.
+Proof.
+simpl.
+intros e; split; intros H.
+ - destruct (e =? 2) eqn:H'.
+    * (* cas (e =? 2) = true *)
+     rewrite Nat.eqb_eq in H'. trivial.
+    * (* cas (e =? 2) = false *)
+     simpl in H.
+     discriminate. 
+  (* rewrite Bool.orb_false_r in H. rewrite Nat.eqb_eq in H. trivial. *)
+ - rewrite H. reflexivity.
+Qed.
+
 Lemma appartient_iff : forall q, (appartient q (etats M_nb_b_impair)) = true <-> (q = 1 \/ q = 2).
 Proof.
 intros q.
 split; intros H.
 - simpl in H.
-  destruct (q =? 1) eqn:H1; destruct (q =? 2) eqn:H2.
-  * rewrite Nat.eqb_eq in H1.
-    rewrite Nat.eqb_eq in H2.
-    rewrite H1 in H2.
-    discriminate.
-  * rewrite Nat.eqb_eq in H1.
-    left.
-    assumption.
-  * rewrite Nat.eqb_eq in H2.
-    right.
-    assumption.
-  * discriminate.
+   destruct (q =? 1) eqn:H1; destruct (q =? 2) eqn:H2.
+   * admit.
+   * admit.
+   * admit.
+   * admit.
 - destruct H; simpl; rewrite H.
-  * simpl.
-    reflexivity.
-  * simpl.
-    reflexivity.
-Qed.
- (*
-Lemma acceptant_iff : forall e, acceptant M_nb_b_impair e = true <-> e = 2.
-Proof.
-simpl.
-intros e.
-split.
-intros H.
-- rewrite Bool.orb_false_r in H. rewrite Nat.eqb_eq in H. trivial.
-- rewrite H.
+   * admit.
+   * admit. 
 Admitted.
-*)
+
+
+
 (* EXERCICE *)
 (* Montrer que si M_nb_b_impair accepte un mot à partir d'un état valide, alors G1 génère ce mot. *)
+(* LE SENS 'DIFFICILE' : plus technique*)
 Lemma M1_mime_G1 :
   forall m q, (appartient q (etats M_nb_b_impair)) = true
   -> (forall e, execute M_nb_b_impair q m = Some e /\ acceptant M_nb_b_impair e = true -> G1 m q).
@@ -339,6 +385,13 @@ Qed.
 Lemma M1_regu_G1 : forall m, reconnait M_nb_b_impair m = true -> G1 m 1.
 Admitted.
 
+
+Theorem M1_ssi_G1 : forall m, reconnait M_nb_b_impair m = true <-> G1 m 1.
+Proof.
+split.
+apply M1_regu_G1.
+apply G1_reco_M1.
+Qed.
 
 (* FIN DU TP4 *)
 
