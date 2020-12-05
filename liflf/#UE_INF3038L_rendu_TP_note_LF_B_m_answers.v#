@@ -1,0 +1,116 @@
+
+(***************************** LIFLF - TPX ************************************)
+(************* Evaluation pratique en temps limité : 30' **********************)
+(******************************************************************************)
+
+Require Import List.
+Import ListNotations.
+
+(***************************** fonction mystère *******************************)
+
+(* On donne le corps suivant d'une fonction
+
+  match ls with
+   | []     => None
+   | x::xs  => Some x
+  end.
+*)
+
+(* EXERCICE : Définir la fonction "mystere" avec le corps donné ci-dessus. *)
+(*            Donner son type *)
+(*            Expliquer simplement ce que fait cette fonction. *)
+
+
+Definition mystere (ls : list  nat) : option nat :=
+ match ls with
+   | []     => None
+   | x::xs  => Some x
+  end.
+
+(* elle renvoie none pour une liste  donnee ou le premiere elesemet sous forme d'option nat) si la liste n'est pas vide* NOne, si la liste st vide*)
+*
+(* Cette fonction renvoie le premier élément de la liste en paramètre (en tant qu'option), ou None 
+(qui est une option nat) si elle est vide *)
+
+
+(***************************** "take" *****************************************)
+
+(* EXERCICE : définir "take n ls" qui renvoie le préfixe de ls de longueur n
+   EXEMPLE  : voir les tests unitaires ci-dessous
+*)
+
+Compute ( 5 - 1).
+Fixpoint take (n:nat) (la : list nat) : list nat :=
+match la with
+  | nil => nil
+  | x::la' =>  if ( Nat.eqb n 0 ) then []
+                else app [x] (take (n-1) la')
+  end.
+
+
+Goal  take 0 [1;2;3;4;5] = [].
+simpl.
+reflexivity.
+Qed.
+
+Goal  take 6 [1;2;3;4;5] = [1;2;3;4;5].
+simpl.
+reflexivity.
+Qed.
+
+Goal  take 3 [1;2;3;4;5] = [1;2;3].
+simpl.
+reflexivity.
+Qed.
+
+Print app.
+
+(***************************** "drop" *****************************************)
+
+(* EXERCICE : définir "drop n ls" qui renvoie le suffixe de ls privée de ses n 
+              premiers éléments
+   EXEMPLE  : voir les tests unitaires ci-dessous
+*)
+
+Fixpoint drop2 (n:nat) (la : list nat) : list nat :=
+match la with
+  | nil => nil
+  | x::la' =>  if ( Nat.eqb n 0 ) then la
+                else drop2 (n-1) la'
+  end.
+
+Fixpoint drop (n:nat) (la : list nat) : list nat :=
+match n with
+  | 0 => la
+  | S m =>  match la with |nil=>la |x::ll => drop (m) ll end
+  end.
+
+Goal  drop 0 [1;2;3;4;5] = [1;2;3;4;5].
+simpl.
+reflexivity.
+Qed.
+
+Goal  drop 6 [1;2;3;4;5] = [].
+simpl.
+reflexivity.
+Qed.
+
+Goal  drop 3 [1;2;3;4;5] = [4;5].
+simpl.
+reflexivity.
+Qed.
+
+(*********************** explication d'énoncé *********************************)
+
+
+(* EXERCICE : On donne l'énoncé suivant "a_expliquer". 
+              Expliquer en français cette propriété
+*)
+Lemma a_expliquer : forall n la, (fun p => app (fst p) (snd p) ) (take n la, drop n la) = la. 
+Admitted.
+(* c'est le theoreme qui verifie que pour tout entier n et tout liste la si on applique 
+take et drop en parallele sur la meme liste, le resultat de leurs deux liste concatenes
+revient a la liste de depart la*)
+
+Compute (a_expliquer 3 [1;2;3;4;5;6]).
+

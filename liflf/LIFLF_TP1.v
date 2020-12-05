@@ -30,7 +30,7 @@ Definition b : nat := 6.
 (* EFFECTUER UN CALCUL... dans l'interpréteur *)
 (* Directive "Compute" *)
 (* RÉSULTAT ATTENDU : 9 *)
-Compute (a+b+b*3).
+Compute (a+b).
 
 (* AFFICHER LE TYPE... dans l'interpréteur *)
 (* Directive "Check" *)
@@ -39,7 +39,6 @@ Check (a+b).
 
 
 (* 1) TYPES ÉNUMÉRÉS et INDUCTIFS *)
-
 
 
 (* Mots-clefs "Inductive" et "|" par cas. 
@@ -56,14 +55,12 @@ Inductive jour : Type :=
 (* ici uniquement des cas de base *)
 
 
-
 (* On peut définir une FONCTION jour_suivant sur ce type.
    (jour_suivant e) s'évalue en le nom du jour suivant le jour e.
    Elle est réalisée suivant *la forme* du paramètre, c'est du
    "filtrage" ou "PATTERN MATCHING". C'est le mécanisme le plus
    confortable pour manipuler des structures inductives. *)
 (* Mots-clef "match" "with" "end" *)
-
 Definition jour_suivant (j : jour) : jour :=
   match j with
   | lundi => mardi
@@ -77,45 +74,39 @@ Definition jour_suivant (j : jour) : jour :=
 
 (* On teste. RÉSULTAT ATTENDU : jeudi *)
 Compute (jour_suivant mercredi).
-Check jour_suivant.
-Print jour_suivant.
-
 
 
 (* EXERCICE *)
 (* Définir la fonction qui retourne le surlendemain d'un jour donné *)
 (* C'est une fonction qui APPLIQUÉE À un jour, RETOURNE un jour *)
 
-Definition surlendemain (j : jour) : jour :=
-  jour_suivant( jour_suivant(j)).
+Definition jour_suivant_le_jour_suivant (j : jour) : jour :=
+jour_suivant(jour_suivant j).
 
 (* On re-teste et on devrait obtenir vendredi*)
-Compute (surlendemain(samedi)).
-
+(* Compute (jour_suivant_le_jour_suivant mercredi). *)
 
 
 (* On peut aussi définir les booléens... *)
 (* Il n'y a que des cas de base et on va les appeler Vrai et Faux *)
-
 Inductive booleens : Type :=
 | Vrai : booleens
 | Faux : booleens.
 
-
-
 (* Ainsi que les fonctions logiques usuelles. *)
 (* Le complémentaire : non. *)
-
 Definition non (a : booleens) : booleens :=
   match a with
   | Vrai => Faux
   | Faux => Vrai
   end.
 
+
 (* Directive d'affichage de type *)
 Check non.
-Compute non(non(Faux)).
 
+(* Directive d'affichage de valeur *)
+Print non.
 
 
 (* EXERCICE *)
@@ -130,19 +121,16 @@ Definition et (a : booleens) (b : booleens) : booleens :=
 Compute (et Vrai (et Faux Vrai)).
 
 
-
 (* EXERCICE *)
 (* Définir la fonction "ou" sur les booléens. *)
 
 Definition ou (a : booleens) (b : booleens) : booleens :=
   match a with
-  | Faux => b
-  | Vrai => Vrai
+  | _ => b
   end.
 
 (* RÉPONSE ATTENDUE : Vrai *)
-Compute (ou Faux Vrai).
-
+ Compute (et Vrai (ou Faux Vrai)). 
 
 
 (* Le langage de Coq a bien sûr des booléens (dans le type prédéfini bool),
@@ -172,10 +160,10 @@ Definition trois  := Succ deux.
 (* On considère que le prédécesseur de quelque chose de la forme Z est... Z *)
 (* Le prédécesseur de quelque chose de la forme Succ toto est bien sûr toto *)
 
-Definition pred (n : entiers) : entiers :=
+Definition pred (n: entiers) : entiers :=
   match n with
   | Z => Z
-  | Succ m => m
+  | Succ n => n
   end.
 
 (* RÉSULTAT ATTENDU :  Succ (Succ Z) *)
@@ -185,16 +173,12 @@ Compute (pred (Succ (Succ (Succ Z)))).
 (* On veut écrire une FONCTION RÉCURSIVE pour ajouter deux entiers.
    Comme la fonction est récursive, on utilise le mot-clé Fixpoint (et
    non plus Definition).
-   Elle se calcule selon la forme du premier paramètre *)
-
+   Elle se calcule selon la forme du premier paramètre *) 
 Fixpoint plus (a : entiers) (b : entiers) : entiers :=
   match a with
   | Z => b
   | Succ n => Succ (plus n b)
   end.
-
-Compute plus(un)(un).
-
 
 
 (* EXERCICE *)
@@ -204,13 +188,13 @@ Compute plus(un)(un).
 Fixpoint mult (a : entiers) (b : entiers) : entiers :=
   match a with
   | Z => Z
-  | Succ n => plus (mult n b) b
+  | Succ n => plus (Succ (Succ n)) (mult n b)
   end.
+
+
 
 (* RÉSULTAT ATTENDU : 9 *)
 Compute (mult trois trois).
-
-
 
 (* EXERCICE *)
 (* Définir une fonction est_pair, telle que est_pair APPLIQUÉE À un entier a RETOURNE Vrai si a est pair, Faux sinon. *)
@@ -218,20 +202,17 @@ Compute (mult trois trois).
 Fixpoint est_pair (n : entiers) : booleens :=
   match n with
   | Z => Vrai
-  | Succ (Succ m) => est_pair(m)
   | Succ Z => Faux
+  | Succ (Succ n) => est_pair n
   end.
 
 (* RÉSULTAT ATTENDU : Vrai *)
 Compute (est_pair deux).
 
 (* RÉSULTAT ATTENDU : Faux *)
-Compute (est_pair (mult trois trois)).
-
-
+Compute (est_pair trois).
 
 (* ------------------------------------------------------------ *)
-
 
 
 (* Précédemment, on a défini nos booléens et nos entiers naturels,
@@ -265,14 +246,10 @@ CE SONT EUX QU'ON UTILISERA DORÉNAVANT.
 
  *)
 
-
-
 (* ------------------------------------------------------------ *)
 
 
-
 (* 2) LISTES D'OBJETS DE TYPE NAT *)
-
 
 
 (* On considère ici des listes d'objets de type nat. *)
@@ -281,7 +258,6 @@ CE SONT EUX QU'ON UTILISERA DORÉNAVANT.
   Le cas de base est bien sûr la liste vide, l'autre règle de construction applique cons
   à un nat et une liste de l'ensemble inductif pour créer un nouvel élément de cet ensemble
 *)
-
 Inductive nliste : Type :=
   | vide : nliste
   | cons : nat -> nliste -> nliste.
@@ -296,19 +272,18 @@ Print liste1.
 Print liste2.
 
 
-
 (* EXERCICE *)
 (* Écrire une fonction ajoute: nat -> nliste -> nliste telle que ajoute n l
    retourne une liste correspondant à l'ajout de l'élément n à la liste l.
    C'est bien sûr juste la fonction qui applique cons
 *)
 
-Definition ajoute (n : nat) (l : nliste) : nliste :=
+Definition ajoute (n: nat) (l: nliste) : nliste :=
   cons n l.
-
+  
+  
 (* RÉSULTAT ATTENDU : cons 3 (cons 2 (cons 1 vide)) *)
 Compute (ajoute 3 liste2).
-
 
 
 (* EXERCICE *)
@@ -319,10 +294,10 @@ Compute (ajoute 3 liste2).
   c'est vide, la longueur vaut zéro, et si l est de la forme cons n l'
   à vous de jouer.  *)
 
-Fixpoint longueur (l : nliste) : nat :=
+Fixpoint longueur (l: nliste) : nat :=
   match l with
   | vide => 0
-  | cons n l' => 1 + (longueur l')
+  | cons n l' => 1 + (longueur l') 
   end.
 
 (* RÉSULTAT ATTENDU : 2 *)
@@ -332,8 +307,14 @@ Compute (longueur liste2).
 (* Écrire une fonction concat: nliste -> nliste -> nliste telle que concat l l'
    retourne une liste correspondant à l'ajout des éléments de l en tête de la liste l'. *)
 
+Fixpoint concat (l1: nliste) (l2: nliste) : nliste :=
+  match l1 with
+  | vide => l2
+  | cons n l' => (concat l' (ajoute n l2))
+  end.
+
 (* RÉSULTAT ATTENDU : cons 2 (cons 1 (cons 2 (cons 1 vide))) *)
-(* Compute (concat liste2 liste2).*)
+Compute (concat liste2 liste2).
 
 (* EXERCICE *)
 (* Écrire une fonction recherche: nat -> nliste -> booleens telle que recherche n l
@@ -343,11 +324,17 @@ Require Import Nat.
 Check (eqb 3 4).
 Compute (eqb 3 4).
 
+Fixpoint recherche (n: nat) (l: nliste) : bool :=
+  match l with
+  | vide => false
+  | cons n' l' => if (Nat.eqb n n') then true else (recherche n l')
+  end.
+
 (* RÉSULTAT ATTENDU : true *)
-(* Compute (recherche 1 liste2).*)
+ Compute (recherche 1 liste2).
 
 (* RÉSULTAT ATTENDU : false *)
-(* Compute (recherche 3 liste2).*)
+ Compute (recherche 3 liste2).
 
 
 (* FIN DU TP1 *)

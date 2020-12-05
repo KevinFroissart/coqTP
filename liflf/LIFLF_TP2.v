@@ -35,9 +35,6 @@ Inductive Alphabet : Type :=
 | a : Alphabet
 | b : Alphabet.
 
-Compute a.
-Check a.
-
 (* Ici, Alphabet est 'le plus petit ensemble qui contient a, b et rien d'autre', donc
    intuitivement, Alphabet est l'ensemble {a,b} *)
 
@@ -45,27 +42,23 @@ Check a.
 (* Définir une fonction comp_alphabet qui teste si deux éléments de l'alphabet sont égaux
    et énoncer son théorème de correction *)
 
-Definition comp_alphabet (x : Alphabet) (y : Alphabet) : bool :=
-  match x with
-  | a =>  match y with
-          | a => true
-          | b => false
-          end
-  | b =>  match y with
-          | b => true
-          | a => false
-          end
+Definition comp_alphabet (a: Alphabet) (b: Alphabet) : bool :=
+  match a, b with
+  | a,a => true
+  | b,b => true
+  | _,_ => false
   end.
-Compute comp_alphabet a b.
 
-(*
-Theorem comp_alphabet_correct : False (* Remplacer ici *).
+
+Theorem comp_alphabet_correct : (comp_alphabet a a) = true  (* Remplacer ici *).
 Proof.
-Admitted.
-*)
+cbv.
+reflexivity.
+Qed.
+
 
 (* On attend "false" comme résultat *)
-(* Compute (comp_alphabet a b). *)
+Compute (comp_alphabet a b).
 
 (* On peut aussi écrire les exemples précédents comme des tests unitaires
 
@@ -74,7 +67,7 @@ Admitted.
    Ici, la 'preuve' est obtenue par calcul :
      - "cbv" (call by value) effectue le calcul
      - la tactique "reflexivity" finit le job. *)
-
+(*
 Example comp_alphabet_ex1 : comp_alphabet a a = true.
 Proof.
 cbv.         (* on effectue le calcul *)
@@ -86,6 +79,7 @@ Proof.
 cbv.
 reflexivity.
 Qed.
+*)
 
 
 (* Le travail de définition d'une fonction déterminant l'égalité qui a été fait
@@ -119,28 +113,21 @@ Print option.
 
 (* EXERCICE *)
 (* Définir une fonction comp_option_nat qui teste si deux "option nat" sont égaux.
+   Par convention, comparer 'rien' et 'rien' renverra vrai.
+   Comparer 'rien' et 'qqchose' renverra forcément faux.
+   Pour le dernier cas, comparer deux 'qqchose' renverra la comparaison effective de ces deux qqchose.
    Vérifier les tests unitaires et énoncer le théorème de correction associé *)
 
-Definition comp_option_nat (m n : option nat) : bool :=
-  match m with
-  | None => match n with
-            | None => true
-            | Some _ => false
-            end
-  | Some p => match n with
-              | None => false
-              | Some q => Nat.eqb p q
-              end
+Definition comp_option_nat (a b: option nat) : bool :=
+  match a, b with
+  | None, None => true
+  | None,_ => false
+  | Some n, Some m => Nat.eqb n m
+  | Some n,_ => false
   end.
 
-(*
-Theorem comp_option_nat_correct : False (* Remplacer ici *).
-Proof.
-Admitted.
-*)
-
 (* Tests unitaires avec reflexivity *)
-
+(*
 Example comp_option_nat_ex1 : comp_option_nat (Some 1) (Some 2) = false.
 Proof.
 cbv. reflexivity.
@@ -160,7 +147,7 @@ Example comp_option_nat_ex4 : comp_option_nat (Some 2) (None) = false.
 Proof.
 cbv. reflexivity.
 Qed.
-
+*)
 
 
 (******************************************************************************)
@@ -173,7 +160,7 @@ Qed.
 
    En Coq, on écrit "A * B" au lieu de  "prod A B" (c'est juste une notation)
 *)
-Print prod. 
+Print prod.
 
 (* Ce type n'a qu'un seul constructeur "pair" qui prend deux arguments : (x:A) et (y:B)
    Prod A B est donc 'le plus petit ensemble qui contient tous les éléments
@@ -187,17 +174,17 @@ Print prod.
    de type Alphabet avec "match" : p:A*B correspond au motif (x,y) où x est de type A et
    y de type B *)
 
-Definition fsta (p : (Alphabet * Alphabet)) : Alphabet :=
+Definition fsta (p: Alphabet * Alphabet) : Alphabet :=
   match p with
-  | (x, y) => x
+  | (x,y) => x
   end.
 
-Definition snda (p : (Alphabet * Alphabet)) : Alphabet :=
+Definition snda (p: Alphabet * Alphabet) : Alphabet :=
   match p with
-  | (x, y) => y
+  | (x,y) => y
   end.
 
-
+(*
 Example fsta_ex1 : (fsta (a,b)) = a.
 Proof.
   cbv. reflexivity.
@@ -207,6 +194,7 @@ Example snda_ex1 : (snda (a,b)) = b.
 Proof.
   cbv. reflexivity.
 Qed.
+*)
 
 (* On peut ré-écrire comp_alphabet en utilisant le pattern matching
    sur la paire (x,y). Attention il y a un "let" caché dans cette
@@ -230,6 +218,14 @@ Qed.
 (* Définir la fonction comp_pair_nat qui compare deux paires d'entiers.
    L'égalité sur les nat est "Nat.eqb" et le connecteur et sur les bool est "andb". *)
 
+Definition comp_pair_nat (a b: nat * nat) : bool :=
+  match a with
+  | (xa,ya) => match b with
+                | (xb,yb) => andb (Nat.eqb xa xb) (Nat.eqb ya yb)
+                end
+  end.
+
+
 (* Tests unitaires avec reflexivity *)
 (*
 Example comp_pair_nat_ex1 : comp_pair_nat (0,1) (0,0) = false.
@@ -246,12 +242,17 @@ Qed.
 (* EXERCICE *)
 (* Définir une fonction swap qui à la paire d'entiers (a,b) fait correspondre (b,a) *)
 
-(*
+Definition swap (n: nat*nat) : nat*nat :=
+  match n with
+  | (x,y) => (y,x)
+  end.
+
+
 Example swap_ex1 : swap (1,2) = (2,1).
 Proof.
   cbv. reflexivity.
 Qed.
-*)
+
 
 
 (******************************************************************************)
@@ -282,15 +283,15 @@ Print list.
 Fixpoint concatene (l1 l2 : list nat) : list nat :=
   match l1 with
   | [] => l2
-  | n::sl1 => n::(concatene sl1 l2)
+  | n::l' => n::(concatene l' l2) 
   end.
+
 
 Example concatene_ex1 : concatene [1;2;3] [4;5] = [1;2;3;4;5].
 Proof.
 cbv. reflexivity.
 Qed.
 
-Compute concatene [1;2;5] [3;8;0].
 
 (* EXERCICE *)
 (* Définir la fonction "appartient" qui prend en paramètres un entier
@@ -300,10 +301,11 @@ Compute concatene [1;2;5] [3;8;0].
 Fixpoint appartient (n : nat) (l : list nat) : bool :=
   match l with
   | [] => false
-  | t::sl => if (Nat.eqb n t) then true else (appartient n sl)
+  | n'::l' => if Nat.eqb n n' then true else appartient n l'
   end.
 
 (* Tests unitaires avec reflexivity *)
+
 Example appartient_ex1 : appartient 0 [1;3;0;5] = true.
 Proof.
 cbv. reflexivity.
@@ -330,7 +332,6 @@ Qed.
    de retour de cette fonction est de type "option valeur"
 *)
 
-
 (* EXERCICE *)
 (* Définir la fonction "trouve" qui prend en paramètres
     - une listes de paires (clef,valeur)
@@ -339,14 +340,15 @@ Qed.
    Les clés seront des Alphabet, les valeurs des nat.
 *)
 
-Fixpoint trouve (n : nat) (l : list (nat * nat)) : nat :=
-  match l with
+Fixpoint trouve (map : list (Alphabet * nat)) (n : Alphabet) : option nat :=
+  match map with
   | [] => None
-  | n::sl => if (fsta).
+  | h::map' => if comp_alphabet n (fst h) then Some (snd h) else trouve map' n 
+  end.
 
 
 (* Tests unitaires avec reflexivity *)
-(*
+
 Example trouve_ex1 :  trouve [(a,1); (b,2)] a = Some 1.
 Proof.
 cbv. reflexivity.
@@ -359,7 +361,7 @@ Example trouve_ex3 :  trouve [(a,2); (a,1)] b = None.
 Proof.
 cbv. reflexivity.
 Qed.
-*)
+
 
 
 (* FIN DU TP2 *)
@@ -386,20 +388,46 @@ Qed.
    - prouver comp_alphabet_complet : si x = y alors comp_alphabet x y = true
 *)
 
+Theorem comp_alphabet_correct_a : forall x y : Alphabet, comp_alphabet x y = true -> x = y.
+Proof.
+destruct x.
+destruct y.
+- reflexivity.
+- discriminate.
+- destruct y.
+  + discriminate.
+  + reflexivity.
+Qed.
+
+Theorem comp_alphabet_complet_a :  forall x y : Alphabet, x = y -> comp_alphabet x y = true.
+destruct x.
+destruct y.
+- reflexivity.
+- discriminate.
+- destruct y.
+  + discriminate.
+  + reflexivity.
+Qed.
 
 
 (* EXERCICE *)
 (* Enoncer et prouver la propriété que comparer un symbole de l'alphabet avec lui-même renvoie vrai.
    HINT : "comp_alphabet_complet" fait exactement ce dont on a besoin, on peut donc l'utiliser *)
 
+Goal comp_alphabet a a = true.
+Proof.
+reflexivity.
+Qed.
 
 (* EXERCICE *)
 (* Compléter la preuve suivante
    HINT : "destruct x", "left" ou "right" pour "\/" *)
 Lemma alphabet_a_juste_deux_elements : forall x:Alphabet, x = a \/ x = b.
 Proof.
-Admitted.
-
+destruct x.
+- left. reflexivity.
+- right. reflexivity.
+Qed.
 
 (* EXERCICE *)
 (* Enoncer et prouver la propriété que la fonction "comp_option_nat" est correcte et complète *)
@@ -407,12 +435,44 @@ Admitted.
    nom de fonction par sa valeur avec "unfold", comme par exemple avec le
    "unfold not" qui remplace "~A" par "A -> False". *)
 
+Lemma comp_option_nat_correct : forall x y, comp_option_nat x y = true -> x = y.
+Proof.
+destruct x.
+destruct y.
+- intros. simpl in H. rewrite PeanoNat.Nat.eqb_eq in H. apply f_equal_nat. assumption.
+- intros. simpl in H. discriminate.
+- destruct y.
+  + discriminate.
+  + reflexivity.
+Qed.
+
+Theorem comp_option_nat_correct2 : forall x y, (comp_option_nat x y = true -> x = y) /\ (x = y -> comp_option_nat x y = true).
+Proof.
+destruct x.
+destruct y.
+- split.
+  + simpl. intros. apply PeanoNat.Nat.eqb_eq in H. apply f_equal_nat. assumption.
+  + simpl. intros. apply PeanoNat.Nat.eqb_eq. admit.
+- split.
+  + simpl. discriminate.
+  + simpl. discriminate.
+- destruct y.
+  + split.
+    * simpl. discriminate.
+    * simpl. discriminate.
+  + split.
+    * simpl. reflexivity.
+    * reflexivity.
+Admitted.
 
 (* EXERCICE *)
 (* Prouver le lemme suivant *)
 Lemma projection_product (A B : Type) : forall p:A*B, p = (fst p, snd p).
 Proof.
-Admitted.
+destruct p.
+simpl.
+reflexivity.
+Qed.
 
 
 (* EXERCICE *)
@@ -420,6 +480,17 @@ Admitted.
    Rappel. Une fonction f est une involution ssi quel que soit x, f(f(x)) = x
    HINT : pour p:A*B une paire, utiliser "destruct p" pour retrouver "(a,b)"
 *)
+
+Lemma swap_correct : forall x y, swap (x,y) = (y,x).
+Proof. 
+destruct x.
+destruct y.
+- reflexivity.
+- reflexivity.
+- destruct y.
+  + reflexivity.
+  + reflexivity.
+Qed.
 
 (* EXERCICE *)
 (* Enoncer et prouver la propriété que la fonction "comp_pair_nat" est correcte
@@ -431,12 +502,34 @@ Admitted.
 Check Bool.andb_true_iff.
 Check PeanoNat.Nat.eqb_eq.
 
+Lemma comp_pair_nat_correct : forall x y, comp_pair_nat x y = true -> x = y.
+Proof.
+destruct x.
+destruct y.
+simpl.
+rewrite Bool.andb_true_iff.
+rewrite PeanoNat.Nat.eqb_eq.
+rewrite PeanoNat.Nat.eqb_eq.
+intros. apply f_equal2_nat.
+destruct H.
+assumption.
+destruct H.
+assumption.
+Qed.
+
+
 
 
 (* EXERCICE *)
 (* Ennoncer et prouver la propriété que l'appartenance d'un élément à une liste vide
    est fausse *)
-
+   
+Lemma appartient_liste_vide : forall n, appartient n [] = false.
+Proof.
+destruct n.
+- simpl. reflexivity.
+- simpl. reflexivity.
+Qed.
 
 (* EXERCICE *)
 (* Ennoncer et prouver la propriété que l'appartenance d'un élément à une liste singleton
@@ -446,6 +539,16 @@ Check PeanoNat.Nat.eqb_eq.
    "PeanoNat.Nat.eqb_eq : forall n m : nat, PeanoNat.Nat.eqb n m = true <-> n = m"
 *)
 
+Lemma appartient_liste_singleton : forall x y, appartient x [y] = true -> x = y.
+Proof.
+destruct x.
+destruct y.
+- simpl. reflexivity.
+- simpl. discriminate.
+- destruct y.
+  + simpl. discriminate.
+  + intros.
+Admitted. 
 
 (* EXERCICE *)
 (* Énoncer et prouver le lemme de correction de "appartient"
@@ -455,6 +558,46 @@ Check PeanoNat.Nat.eqb_eq.
 
    NOTA BENE : c'est assez ambitieux à prouver à ce stade.
 *)
+
+Lemma appartient_correct : forall x ls l1 l2, (appartient x ls) = true <-> ls = l1 ++ x :: l2.
+Proof.
+destruct x.
+destruct ls.
+destruct l1.
+destruct l2.
+- simpl. split.
+  + discriminate.
+  + discriminate.
+- simpl. split.
+  + discriminate.
+  + discriminate.
+- destruct l2.
+  + simpl. split.
+    * discriminate.
+    * discriminate.
+  + simpl. split.
+    * discriminate.
+    * discriminate.
+- destruct l1. destruct l2.
+  + split.
+    * intros. simpl. admit.
+    * intros. admit.
+  + split.
+    * intros. simpl. admit. 
+    * intros. simpl in H. admit.
+  + destruct l2.
+    * split. intros. simpl. admit. intros. simpl in H. admit.
+    * split. intros. simpl. admit. intros. simpl in H. rewrite H . simpl. admit.
+- destruct ls.
+  + destruct l1. destruct l2.
+    * split. simpl. discriminate. simpl. discriminate.
+    * simpl. split. discriminate. discriminate.
+    * destruct l2. simpl. split. discriminate. discriminate. simpl. split. discriminate. discriminate.
+  + destruct l1. destruct l2.
+    * split. intros. admit.  intros. admit.
+    * split. intros. admit.  intros. admit.
+    * destruct l2. split. intros. admit. intros. admit. split. intros. admit. intros. admit.
+Admitted.
 
 
 (* EXERCICE *)
@@ -466,7 +609,24 @@ Check PeanoNat.Nat.eqb_eq.
    est alors ajouté
 *)
 
-
+Lemma trouve_tete : forall l k v, trouve ((k,v)::l) k = Some v.
+Proof.
+induction l.
+induction k.
+induction v.
+- simpl. reflexivity.
+- simpl. reflexivity.
+- induction v.
+  + simpl. reflexivity.
+  + simpl. reflexivity.
+- induction k.
+  + induction v.
+    * simpl. reflexivity.
+    * simpl. reflexivity.
+  + induction v.
+    * simpl. reflexivity.
+    * simpl. reflexivity.
+Qed.
 
 (* ------------------------------------------------------------ *)
 

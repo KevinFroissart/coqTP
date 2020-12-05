@@ -8,8 +8,8 @@
   L'objectif de LIFLF_TP3 est de définir des automates et de les faire s'exécuter
   dans la partie *programme* de Coq. Pour cela, on va utiliser ce qu'on a défini
   lors du TP2, pour définir les automates :
-   1) Le codage du quintuplet usuel <K, Sigma, delta : K*Sigma -> K, s, F> en Coq,
-   2) La représentation finie de la fonction delta : K*Sigma -> K.
+   1) le codage du quintuplet usuel <K, Sigma, delta : K*Sigma -> K, s, F> en Coq
+   2) la représentation finie de la fonction delta : K*Sigma -> K
 
   Pour aller plus loin, on introduit le polymorphisme en fin de sujet.
 *)
@@ -61,12 +61,12 @@ Fixpoint trouve (assoc : list (Alphabet * nat)) (key : Alphabet) : option nat :=
 (* Partie 1 : la représentation des Automates en Coq  *)
 (******************************************************************************)
 
-(* Formellement, un Automate est un quintuplet <K, Sigma, K, delta : K*Sigma -> K, s, F > avec
+(* Formellement, un Automate est un quintuplet <K, Sigma, delta : K*Sigma -> K, s, F > avec
    - K l'ensemble des états,
    - Sigma l'alphabet,
    - delta la fonction de transition
    - s l'état initial,
-   - F l'ensemble des état finaux.
+   - F l'ensemble des état finaux
 
    Ici, on va représenter les ensembles par des listes et la fonction de transition par une fonction (!).
    On va s'appuyer sur le type "Alphabet" défini dans le TP2.
@@ -90,11 +90,49 @@ Fixpoint trouve (assoc : list (Alphabet * nat)) (key : Alphabet) : option nat :=
 *)
 
 (* EXERCICE *)
-(* Définir le type "Automate" représentant ce quintuplet.
-   Ce type aura un seul constructeur que l'on nommera "automate". *)
-
+(* Définir le type Automate représentant ce quintuplet. *)
 Inductive Automate : Type :=
-  automate : list nat -> list Alphabet -> (nat -> Alphabet -> option nat) -> nat -> list nat -> Automate.
+    automate : list nat -> list Alphabet -> (nat -> Alphabet -> option nat) -> nat -> list nat -> Automate.
+
+(* Question : pour un automate "M = automate K Sigma delta s F", peut-on dire que
+              les élements de F qui ne sont pas dans K sont insignifiants ?
+*)
+
+
+(* EXERCICE *)
+(* Définir les 5 fonctions suivantes *)
+
+(* "etats" : prend en paramètre un automate et renvoie la liste des états *)
+Definition etats (M : Automate) :  list nat :=
+  match M with
+    automate ql _ _ _ _ => ql
+  end.
+
+(* "symboles" : prend en paramètre un automate et renvoie la liste des symboles de l'alphabet *)
+Definition symboles (M : Automate) :  list Alphabet :=
+  match M with
+    automate _ sigma _ _ _ => sigma
+  end.
+
+(* "initial" : prend en paramètre un automate et renvoie l'état initial *)
+Definition initial  (M : Automate) :  nat :=
+  match M with
+    automate _ _ _ q0 _ => q0
+  end.
+
+(* "acceptant" : prend en paramètre un automate et un état q et renvoie true ssi q est un état final *)
+Definition acceptant  (M : Automate) (q : nat) : bool  :=
+  match M with
+    automate _ _ _ _ lF => (appartient q lF)
+  end.
+
+(* "transition" : prend en paramètre un automate, un état q et un symbole c, et renvoie l'état (optionnellement)
+   accessible depuis q en lisant c *)
+Definition transition  (M : Automate) (q : nat) (c : Alphabet) : option nat :=
+  match M with
+    automate _ _ f _ _ => f q c
+  end.
+
 
 (* EXERCICE *)
 (* Exemple : définir l'automate "M_nb_b_impair" à deux états qui accepte les mots contenant un nombre impair de 'b',
@@ -109,38 +147,7 @@ match (q,c) with
  | (_,_) => None
 end.
 
-Definition M_nb_b_impair := automate [1; 2] [a; b] delta_nb_b_impair 1 [2].
-
-
-(* EXERCICE *)
-(* Définir les 5 fonctions suivantes *)
-
-(* "etats" : prend en paramètre un automate et renvoie la liste des états *)
-Definition etats (A : Automate) : list nat :=
-  match A with
-    automate K Sig delta s F => K
-  end.
-(* "symboles" : prend en paramètre un automate et renvoie la liste des symboles de l'alphabet *)
-Definition symboles (A : Automate) : list Alphabet :=
-  match A with
-    automate K Sig delta s F => Sig
-  end.
-(* "initial" : prend en paramètre un automate et renvoie l'état initial *)
-Definition initial (A : Automate) : nat :=
-  match A with
-    automate K Sig delta s F => s
-  end.
-(* "acceptant" : prend en paramètre un automate et un état q et renvoie true ssi q est un état final *)
-Definition acceptant (A : Automate) (q : nat) : bool :=
-  match A with
-    automate K Sig delta s F => appartient(q)(F)
-  end.
-(* "transition" : prend en paramètre un automate, un état q et un symbole c, et renvoie l'état (optionnellement)
-   accessible depuis q en lisant c *)
-Definition transition (A : Automate) (q : nat) (c : Alphabet) : option nat :=
-  match A with
-    automate K Sig delta s F => delta(q)(c)
-  end.
+Definition M_nb_b_impair := automate [1;2] [a;b] (delta_nb_b_impair) 1 [2].
 
 Example M_nb_b_impair_etats : etats M_nb_b_impair = [1;2].
 Proof.
@@ -173,14 +180,15 @@ Qed.
 
 
 (* EXERCICE *)
-(* Définir "execute" qui va calculer l'état d'arrivée en lisant un mot, c'est-à-dire une "list Alphabet" *)
-Fixpoint execute (A : Automate) (q : nat) (w : list Alphabet) : option nat :=
+(* Définir "execute" qui prend en paramètre un automate, un état q et un mot w (une "list Alphabet"),
+   et qui va calculer l'état d'arrivée, en partant de l'état q et en lisant le mot w *)
+
+Fixpoint execute (M : Automate)  (q : nat) (w : list Alphabet) : option nat :=
   match w with
   | [] => Some q
-  | c::sw =>  match (transition A q c) with
-              | None => None
-              | Some r => execute A r sw
-              end
+  | h::rw => match transition M q h with
+             | None => None
+             | Some e => execute M e rw end
   end.
 
 Example M_nb_b_impair_execute_1 : execute M_nb_b_impair 1 [] = Some 1.
@@ -189,24 +197,47 @@ Example M_nb_b_impair_execute_2 : execute M_nb_b_impair 1 [a;a;b;a;b;b] = Some 2
 cbv. reflexivity. Qed.
 
 
-
 (* EXERCICE *)
-(* Définir "reconnait" qui va accepter ou refuser un mot *)
+(* Définir "reconnait" qui prend en paramètre un automate et un mot w,
+   et qui renvoie vrai si w est accepté par l'automate, faux sinon *)
 
-Definition reconnait (M : Automate) (
-
-(*
+Definition reconnait (M : Automate) (w : list Alphabet) : bool :=
+  match (execute M (initial M) w) with
+  | None => false
+  | Some e => acceptant M e
+  end.
 Example M_nb_b_impair_reconnait_1 : reconnait M_nb_b_impair [] = false.
 cbv. reflexivity. Qed.
 Example M_nb_b_impair_reconnait_2 : reconnait M_nb_b_impair [a;a;b;a;b;b] = true.
 cbv. reflexivity. Qed.
-*)
 
 
 (* EXERCICE *)
-(* Exemple : définir l'automate "M_commence_et_finit_par_a" à trois états qui accepte les mots commençant et finissant par 'a',
+(* Exemple : définir l'automate "M_commence_et_finit_par_a" à trois états
+             qui accepte les mots commençant et finissant par 'a',
              et donner des tests unitaires *)
 
+Definition delta_commence_et_finit_par_a (q : nat) (c : Alphabet) : option nat :=
+match (q,c) with
+ | (1,a) => Some 2
+ | (2,a) => Some 2
+ | (2,b) => Some 3
+ | (3,a) => Some 2
+ | (3,b) => Some 3
+ | (_,_) => None
+end.
+
+Definition M_commence_et_finit_par_a := automate [1;2;3] [a;b] (delta_commence_et_finit_par_a) 1 [2].
+
+Example M_commence_et_finit_par_a_execute_1 : execute M_commence_et_finit_par_a 1 [] = Some 1.
+cbv. reflexivity. Qed.
+Example M_commence_et_finit_par_a_execute_2 : execute M_commence_et_finit_par_a 1 [a;a;b;a;b;b;a] = Some 2.
+cbv. reflexivity. Qed.
+
+Example M_commence_et_finit_par_a_reconnait_1 : reconnait M_commence_et_finit_par_a [] = false.
+cbv. reflexivity. Qed.
+Example M_commence_et_finit_par_a_reconnait_2 : reconnait M_commence_et_finit_par_a [a;a;b;a;b;b;a] = true.
+cbv. reflexivity. Qed.
 
 
 
@@ -250,17 +281,28 @@ end.
 
 (* EXERCICE *)
 (* Définir la fonction "trouve_paire" avec pour type "list ((nat * Alphabet) * nat) -> (nat * Alphabet) -> option nat"
-   qui prend en paramètres une liste et une clé et retourne la première valeur correspondant à la clé si elle existe,
+   qui prend en paramètres une lite et une clé et retourne la première valeur correspondant à la clé si elle existe,
    None sinon.
    La liste est une liste de "((nat * Alphabet) * Alphabet)" et donc la clé est un "(nat * Alphabet)".
 *)
+Definition comp_paire (x y : (nat * Alphabet)) : bool :=
+  andb (Nat.eqb (fst x) (fst y)) (comp_alphabet (snd x) (snd y)).
+Fixpoint trouve_paire (assoc : list ((nat * Alphabet) * nat)) (key : (nat * Alphabet)) : option nat :=
+  match assoc with
+    | [] => None
+    | h::rassoc => if (comp_paire key (fst h)) then (Some (snd h))
+                   else trouve_paire rassoc key
+  end.
 
 
 (* EXERCICE *)
 (* En utilisant trouve_paire, définir une fonction "graphe_vers_fonction" qui transforme
    une liste "list ((nat * Alphabet) * nat)" en une fonction "Alphabet -> nat -> option nat"
 *)
-
+Definition gvf (assoc : list ((nat * Alphabet) * nat)) (q : nat) (c : Alphabet) : option nat :=
+  trouve_paire assoc (pair q c).
+Definition graphe_vers_fonction (assoc : list ((nat * Alphabet) * nat)) : nat -> Alphabet -> option nat :=
+  gvf assoc.
 
 
 (* EXERCICE *)
@@ -268,18 +310,36 @@ end.
              et donner des tests unitaires. Le graphe de transition est donnée ci-dessous. *)
 Definition graphe_nb_b_impair := [((1,a), 1) ; ((1,b),2) ; ((2,a),2) ; ((2,b),1)].
 
+Compute (trouve_paire graphe_nb_b_impair (3,b)).
 
-(*
+Definition delta_nb_b_impair_graphe : nat -> Alphabet -> option nat :=
+  graphe_vers_fonction graphe_nb_b_impair.
+
+Compute ((graphe_vers_fonction graphe_nb_b_impair) 2 a).
+
+Definition M_nb_b_impair' := automate [1;2] [a;b] (delta_nb_b_impair_graphe) 1 [2].
+
 Example M_nb_b_impair_reconnait_1' : reconnait M_nb_b_impair' [] = false.
 cbv. reflexivity. Qed.
 Example M_nb_b_impair_reconnait_2' : reconnait M_nb_b_impair' [a;a;b;a;b;b] = true.
 cbv. reflexivity. Qed.
-*)
 
 
 (* EXERCICE *)
 (* Exemple : définir l'automate à trois états qui accepte les mots commençant et finissant par 'a',
              et donner des tests unitaires. La fonction de transition est donnée ci-dessous. *)
+Definition graphe_commence_et_finit_par_a := [((1,a),2) ; ((2,a),2) ; ((2,b),3) ; ((3,a),2) ; ((3,b),3)].
+Definition delta_commence_et_finit_par_a_graphe : nat -> Alphabet -> option nat :=
+  graphe_vers_fonction graphe_commence_et_finit_par_a.
+
+Compute ((graphe_vers_fonction graphe_commence_et_finit_par_a) 2 a).
+
+Definition M_commence_et_finit_par_a' := automate [1;2;3] [a;b] (delta_commence_et_finit_par_a_graphe) 1 [2].
+
+Example M_commence_et_finit_par_a_reconnait_1' : reconnait M_nb_b_impair' [] = false.
+cbv. reflexivity. Qed.
+Example M_commence_et_finit_par_a_2' : reconnait M_commence_et_finit_par_a' [a;a;b;a;b;a] = true.
+cbv. reflexivity. Qed.
 
 
 (* Rappel : dans "M_nb_b_impair'" et "M_nb_b_impair" on ne s'intéresse qu'aux états,
@@ -287,6 +347,25 @@ cbv. reflexivity. Qed.
 
 (* EXERCICE *)
 (* Montrer que delta_nb_b_impair et delta_nb_b_impair_graphe sont équivalents sur les états valides *)
+Lemma delta_nb_b_impair_trouve : forall q c, (appartient q [1;2] = true) ->  delta_nb_b_impair_graphe q c = delta_nb_b_impair q c.
+Proof.
+intros q c Happ.
+assert (q = 1 \/ q = 2) as Hq.
+{ simpl in Happ.
+  rewrite Bool.orb_false_r in Happ.
+  apply Bool.orb_true_iff in Happ.
+  destruct Happ as [Hq1 | Hq2].
+  - apply PeanoNat.Nat.eqb_eq in Hq1. left. exact Hq1.
+  - apply PeanoNat.Nat.eqb_eq in Hq2. right. exact Hq2.
+}
+destruct Hq as [Hq1 | Hq2].
+- destruct c.
+  * rewrite Hq1. cbv. reflexivity.
+  * rewrite Hq1. cbv. reflexivity.
+- destruct c.
+  * rewrite Hq2. cbv. reflexivity.
+  * rewrite Hq2. cbv. reflexivity.
+Qed.
 
 
 (* FIN DU TP3 *)
@@ -310,14 +389,17 @@ Print appartient.
 
 (* EXERCICE *)
 (* Définir la fonction "appartient_poly" qui prend en paramètres
-    - Un type A,
-    - Une fonction comp_A de décision de l'égalité sur A,
-    - Un élement x de type A,
-    - Une liste l d'éléments de A,
-   et renvoie true si et seulement si l'élément x est dans la liste l *)
+    - un type A
+    - une fonction de décision de l'égalité sur A 
+    - un élement de x:A
+    - une liste d'éléments de A*)
+Fixpoint appartient_poly A (comp_A : A -> A -> bool) (x : A) (l : list A) : bool :=
+  match l with
+  | []   => false
+  | h::rl => (comp_A x h) || (appartient_poly A comp_A x rl)
+  end.
 
 (* Tests unitaires avec reflexivity *)
-(*
 Example appartient_poly_ex1 : appartient_poly nat (Nat.eqb) 0 [1;3;0;5] = true.
 Proof.
 simpl. reflexivity.
@@ -326,18 +408,22 @@ Example appartient_poly_ex2 : appartient_poly nat (Nat.eqb) 4 [1;3;0;5] = false.
 Proof.
 simpl. reflexivity.
 Qed.
-*)
 
 
 (* On peut bien sûr montrer par calcul que "appartient" est juste l'instance
    particulière de "appartient_poly nat (Nat.eqb) nat (Nat.eqb)" *)
-
+Lemma appartient_poly_instance : forall x ls,  appartient_poly nat (Nat.eqb) x ls = appartient x ls.
+Proof.
+intros x ls.
+induction ls as [ | hls rls IHrls].
+- simpl. reflexivity.
+- simpl. rewrite IHrls. reflexivity.
+Qed.
 
 (* Pour bien représenter *l'appartenance* à la liste, il faut quand même s'assurer
    que "comp_A" respecte la spécification 'décider de l'égalité dans "A"'.
    Les exemples suivants montrent des choix arbitraires de "comp_A". *)
 
-(*
 Example appartient_poly_ex3 : appartient_poly nat (fun x y => false) 0 [1;3;0;5] = false.
 Proof.
 simpl. reflexivity.
@@ -347,7 +433,6 @@ Example appartient_poly_ex4 : appartient_poly nat (fun x y => true) 4 [1;3;0;5] 
 Proof.
 simpl. reflexivity.
 Qed.
-*)
 
 
 (* Si on veut prouver le lemme équivalent pour "appartient_poly", on a besoin
@@ -356,6 +441,13 @@ Qed.
 
 (* EXERCICE *)
 (* Montrer que si x = y alors x appartient à une liste constituée que de [y] *)
+Lemma appartient_poly_singleton : forall A (x y : A) (comp : A -> A -> bool),
+      (comp x y = true <-> x = y) -> (appartient_poly A comp x [y] = true <-> x = y).
+Proof.
+intros A x y comp Hcomp.
+simpl. rewrite Bool.orb_false_r. rewrite Hcomp.
+split; intros; assumption.
+Qed.
 
 
 (* On peut même aller plus loin et montrer que "(comp x y = true <-> x = y)" est 
@@ -363,6 +455,15 @@ Qed.
 
 (* EXERCICE *)
 (* Montrer que si x appartient à une liste constituée que de [y] alors x = y *)
+Lemma appartient_poly_comp : forall A (x y:A) (comp : A -> A -> bool), 
+      (appartient_poly A comp x [y] = true <-> x = y) -> (comp x y = true <-> x = y).
+Proof.
+intros A x y comp Hsingl.
+rewrite <- Hsingl.
+simpl. rewrite Bool.orb_false_r. split.
+- intro. assumption.
+- intro. assumption.
+Qed.
 
 
 (* Il en est de même pour "trouve" et "trouve_paire" *)
@@ -372,9 +473,30 @@ Print trouve_paire.
 
 (* EXERCICE *)
 (* Définir la fonction "trouve_poly", version polymorphe de "trouve" et "trouve_paire" *)
+Fixpoint trouve_poly KT VT (comp_K : KT -> KT -> bool) (assoc : list (KT * VT)) (key : KT) : option VT :=
+  match assoc with
+    | []       => None
+    | h::rassoc => if (comp_K key (fst h)) then (Some (snd h))
+                   else trouve_poly KT VT comp_K rassoc key
+  end.
 
 (* EXERCICE *)
 (* Montrer que "trouve" et "trouve_paire" sont bien des instances de "trouve_poly" *)
+Lemma trouve_poly_instance_1 : forall ls k, trouve_poly Alphabet nat (comp_alphabet) ls k = trouve ls k.
+Proof.
+intros ls k.
+induction ls as [| h rls IHrls].
+- simpl. reflexivity.
+- simpl. rewrite IHrls. reflexivity.
+Qed.
+
+Lemma trouve_poly_instance_2 : forall ls k, trouve_poly (nat * Alphabet) nat (comp_paire) ls k = trouve_paire ls k.
+Proof.
+intros ls k.
+induction ls as [| h rls IHrls].
+- simpl. reflexivity.
+- simpl. rewrite IHrls. reflexivity.
+Qed.
 
 
 (* ------------------------------------------------------------ *)
